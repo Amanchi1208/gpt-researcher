@@ -9,7 +9,7 @@ class Config:
     def __init__(self, config_file: str = None):
         """Initialize the config class."""
         self.config_file = os.path.expanduser(config_file) if config_file else os.getenv('CONFIG_FILE')
-        self.retriever = os.getenv('RETRIEVER', "tavily")
+        self.retrievers = self.parse_retrievers(os.getenv('RETRIEVER', "tavily"))
         self.embedding_provider = os.getenv('EMBEDDING_PROVIDER', 'openai')
         self.similarity_threshold = int(os.getenv('SIMILARITY_THRESHOLD', 0.38))
         self.llm_provider = os.getenv('LLM_PROVIDER', "openai")
@@ -31,7 +31,7 @@ class Config:
         self.report_format = os.getenv('REPORT_FORMAT', "APA")
         self.max_iterations = int(os.getenv('MAX_ITERATIONS', 3))
         self.agent_role = os.getenv('AGENT_ROLE', None)
-        self.scraper = os.getenv("SCRAPER", "newspaper")
+        self.scraper = os.getenv("SCRAPER", "bs")
         self.max_subtopics = os.getenv("MAX_SUBTOPICS", 3)
         self.doc_path = os.getenv("DOC_PATH", "")
         self.llm_kwargs = {} 
@@ -42,7 +42,20 @@ class Config:
 
         if self.doc_path:
             self.validate_doc_path()
-        
+
+    def parse_retrievers(self, retriever_str: str):
+        """Parse the retriever string into a list of retrievers and validate them."""
+        VALID_RETRIEVERS = [
+            "arxiv", "bing", "custom", "duckduckgo", "exa", "google", "searx",
+            "semantic_scholar", "serpapi", "serper", "tavily", "pubmed_central"
+        ]
+        retrievers = [retriever.strip() for retriever in retriever_str.split(',')]
+        invalid_retrievers = [r for r in retrievers if r not in VALID_RETRIEVERS]
+        if invalid_retrievers:
+            raise ValueError(f"Invalid retriever(s) found: {', '.join(invalid_retrievers)}. "
+                             f"Valid options are: {', '.join(VALID_RETRIEVERS)}.")
+        return retrievers
+
     def validate_doc_path(self):
         """Ensure that the folder exists at the doc path"""
         os.makedirs(self.doc_path, exist_ok=True)
